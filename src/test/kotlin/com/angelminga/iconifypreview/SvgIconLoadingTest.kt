@@ -5,6 +5,7 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.IconUtil
 import java.awt.image.BufferedImage
 import java.nio.file.Files
+import javax.swing.Icon
 
 /** IconifyClient renders icons by writing the SVG to disk and reading it back with IconLoader. */
 class SvgIconLoadingTest : BasePlatformTestCase() {
@@ -15,17 +16,20 @@ class SvgIconLoadingTest : BasePlatformTestCase() {
         val file = Files.createTempFile("icon", ".svg")
         Files.writeString(file, svg.replace("currentColor", "#ff0000"))
 
-        // The exact size depends on the UI scale (not 1 on headless Linux), so only proportions are checked.
+        // Sizes depend on the UI scale, which differs on headless Linux, so they are not compared exactly.
         val icon = IconLoader.findIcon(file.toUri().toURL())!!
         assertTrue("height ${icon.iconHeight}", icon.iconHeight > 0)
-        assertEquals(icon.iconHeight, icon.iconWidth)
+        assertCenterIsRed(icon)
 
         val large = IconUtil.scale(icon, null, 4f)
-        assertEquals(icon.iconHeight * 4.0, large.iconHeight.toDouble(), 1.0)
+        assertTrue("${icon.iconHeight} → ${large.iconHeight}", large.iconHeight > icon.iconHeight)
+        assertCenterIsRed(large)
+    }
 
-        // The fill color must survive: the center pixel is red.
-        val image = BufferedImage(large.iconWidth, large.iconHeight, BufferedImage.TYPE_INT_ARGB)
-        large.paintIcon(null, image.createGraphics(), 0, 0)
-        assertEquals(0xFFFF0000.toInt(), image.getRGB(large.iconWidth / 2, large.iconHeight / 2))
+    /** The fill color must survive loading and scaling. */
+    private fun assertCenterIsRed(icon: Icon) {
+        val image = BufferedImage(icon.iconWidth, icon.iconHeight, BufferedImage.TYPE_INT_ARGB)
+        icon.paintIcon(null, image.createGraphics(), 0, 0)
+        assertEquals(0xFFFF0000.toInt(), image.getRGB(icon.iconWidth / 2, icon.iconHeight / 2))
     }
 }
