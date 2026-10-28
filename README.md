@@ -9,6 +9,8 @@ JetBrains IDE plugin that draws [Iconify](https://iconify.design) icons next to 
 - Hover for a 64 px preview, click to open the icon on iconify.design.
 - Completion with pictures: `"mdi:` lists a set's icons; in `icon="…"` properties a plain word searches all sets.
 - "Unknown Iconify icon" inspection: misspelled names are underlined, with quick fixes to the closest real icons.
+
+![Icon name completion with pictures](docs/completion.png)
 - Only prefixes of real Iconify sets are previewed (the list comes from `/collections` and is refreshed weekly).
 - Icons are downloaded once from the Iconify API and cached in `<IDE system dir>/iconify-preview/`.
 
