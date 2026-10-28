@@ -1,5 +1,6 @@
 package com.angelminga.iconifypreview
 
+import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
 import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
@@ -18,6 +19,7 @@ import com.intellij.openapi.ui.popup.JBPopup
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.Key
+import com.intellij.psi.PsiDocumentManager
 import com.intellij.ui.awt.RelativePoint
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.Alarm
@@ -38,6 +40,7 @@ internal class EditorIconPreview(private val editor: Editor) : Disposable, Edito
     private val alarm = Alarm(Alarm.ThreadToUse.SWING_THREAD, this)
     private var popup: JBPopup? = null
     private var popupInlay: Inlay<*>? = null
+    private var hasIcons = false
 
     init {
         editor.document.addDocumentListener(object : DocumentListener {
@@ -47,8 +50,19 @@ internal class EditorIconPreview(private val editor: Editor) : Disposable, Edito
         editor.addEditorMouseMotionListener(this, this)
         ApplicationManager.getApplication().messageBus.connect(this).apply {
             subscribe(IconifyClient.TOPIC, IconifyListener { scheduleUpdate(LOADED_DELAY_MS) })
+            subscribe(IconifyClient.SETS_TOPIC, IconifyListener { ApplicationManager.getApplication().invokeLater(::recheckNames) })
             subscribe(EditorColorsManager.TOPIC, EditorColorsListener { scheduleUpdate(0) })
         }
+    }
+
+    /** Icon set names arrived: run inspections again so [UnknownIconInspection] can flag misspelled icons. */
+    private fun recheckNames() {
+        if (editor.isDisposed || !hasIcons) return
+        val project = editor.project ?: return
+        val file = PsiDocumentManager.getInstance(project).getPsiFile(editor.document) ?: return
+        // restart(PsiFile) is deprecated since 2026.2, but its replacement restart(PsiFile, Object) doesn't exist in 2025.2.
+        @Suppress("DEPRECATION")
+        DaemonCodeAnalyzer.getInstance(project).restart(file)
     }
 
     fun scheduleUpdate(delayMs: Int) {
@@ -60,10 +74,12 @@ internal class EditorIconPreview(private val editor: Editor) : Disposable, Edito
         if (editor.isDisposed) return
         val text = editor.document.immutableCharSequence
         val wanted = HashMap<Int, IconInlayRenderer>()
+        hasIcons = false
         if (IconifyPreviewSettings.getInstance().state.enabled && text.length <= MAX_DOCUMENT_LENGTH) {
             val client = IconifyClient.getInstance()
             val color = editor.colorsScheme.defaultForeground
             for (match in IconNameScanner.find(text)) {
+                hasIcons = true
                 val image = client.icon(match, color) ?: continue
                 wanted[match.offset] = IconInlayRenderer(match, image)
             }

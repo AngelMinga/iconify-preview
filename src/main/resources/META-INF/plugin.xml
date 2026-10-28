@@ -12,6 +12,10 @@
       <li><b>Inline preview</b> in the editor's text color, sized to the line, in any file type (JSX, TSX, Vue, HTML, CSS, JSON…).</li>
       <li><b>Hover</b> an icon for a large preview and its full name.</li>
       <li><b>Click</b> an icon to open its page on iconify.design.</li>
+      <li><b>Completion</b> with pictures: type <code>"mdi:</code> to browse a set, or a word such as
+      <code>icon="wallet</code> to search all sets (Ctrl+Space).</li>
+      <li><b>Typo check:</b> names that don't exist, such as <code>"mdi:hoem"</code>, are underlined, with quick fixes
+      to the closest real icons. <code>@iconify/react</code> would silently render nothing for them.</li>
       <li>Works with all 200+ Iconify icon sets. Only names of real sets are previewed, so strings like <code>"12:30"</code> are left alone.</li>
       <li>Each icon is downloaded once and cached on disk; previews keep working offline.</li>
       <li><b>Private:</b> no telemetry. Only icon names are sent to the Iconify API, never your code. See the
@@ -23,6 +27,11 @@
     ]]></description>
 
     <change-notes><![CDATA[
+    <h3>0.2.0</h3>
+    <ul>
+      <li>Icon name completion with pictures: type <code>"mdi:</code> to list a set's icons, or search all sets by word in <code>icon="…"</code> properties.</li>
+      <li>New inspection "Unknown Iconify icon": misspelled names are underlined, with quick fixes to the closest real icons.</li>
+    </ul>
     <h3>0.1.0</h3>
     <ul><li>First version: inline icon previews, hover preview and link to iconify.design.</li></ul>
     ]]></change-notes>
@@ -33,6 +42,19 @@
 
     <extensions defaultExtensionNs="com.intellij">
         <editorFactoryListener implementation="com.angelminga.iconifypreview.IconPreviewEditorFactoryListener"/>
+        <completion.contributor language="any" order="first"
+                                implementationClass="com.angelminga.iconifypreview.IconCompletionContributor"/>
+        <completion.confidence language="any" order="first"
+                               implementationClass="com.angelminga.iconifypreview.IconCompletionConfidence"/>
+        <typedHandler implementation="com.angelminga.iconifypreview.IconTypedHandler"/>
+        <lookup.charFilter implementation="com.angelminga.iconifypreview.IconCharFilter" order="first"/>
+        <localInspection shortName="IconifyUnknownIcon"
+                         bundle="messages.IconifyPreviewBundle"
+                         key="inspection.unknown.icon.display.name"
+                         groupKey="inspection.group.name"
+                         enabledByDefault="true"
+                         level="WARNING"
+                         implementationClass="com.angelminga.iconifypreview.UnknownIconInspection"/>
         <applicationConfigurable parentId="tools"
                                  instance="com.angelminga.iconifypreview.IconifyPreviewConfigurable"
                                  id="com.angelminga.iconifypreview.settings"

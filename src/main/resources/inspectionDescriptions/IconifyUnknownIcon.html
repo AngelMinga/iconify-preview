@@ -1,0 +1,11 @@
+<html>
+<body>
+Reports quoted Iconify icon names whose set exists but the icon doesn't, usually a typo such as
+<code>"mdi:hoem"</code> or <code>"material-symbols:setings"</code>.
+Libraries such as <code>@iconify/react</code> render nothing for them, without any error.
+<p>The quick fixes replace the name with the closest real icons of the same set.</p>
+<p>Names are checked against the set's icon list, which is downloaded once from the Iconify API and cached.
+Strings whose prefix isn't an Iconify set, such as <code>"12:30"</code>, are ignored.</p>
+<!-- tooltip end -->
+</body>
+</html>
