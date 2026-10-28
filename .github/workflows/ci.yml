@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# A newer push to the same branch cancels the run that is still in progress.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Test and build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+
+      # Caches Gradle and the IntelliJ Platform downloads, and validates the committed gradle-wrapper.jar.
+      # "basic" is the open-source (MIT) cache; the default "enhanced" one is proprietary.
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: basic
+
+      - name: Test, build and validate plugin.xml
+        run: ./gradlew test buildPlugin verifyPluginStructure
+
+      - name: Upload test report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-report
+          path: build/reports/tests/test
+
+      - name: Upload plugin zip
+        uses: actions/upload-artifact@v7
+        with:
+          name: plugin-zip
+          path: build/distributions/*.zip
+
+  verify:
+    name: Plugin Verifier
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: basic
+
+      # Each IDE downloaded for verification takes more than 1 GB.
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
+
+      # IDEs and failure levels (including internal API usage) are set in build.gradle.kts.
+      - name: Run IntelliJ Plugin Verifier
+        run: ./gradlew verifyPlugin
+
+      - name: Upload verifier report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: plugin-verifier-report
+          path: build/reports/pluginVerifier
