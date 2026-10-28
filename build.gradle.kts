@@ -60,3 +60,8 @@ intellijPlatform {
 kotlin {
     jvmToolchain(21)
 }
+
+tasks.test {
+    // Painting icons into images works differently on headless Linux, so the SVG rendering test only runs locally.
+    if (providers.environmentVariable("CI").isPresent) exclude("**/SvgIconLoadingTest*")
+}
